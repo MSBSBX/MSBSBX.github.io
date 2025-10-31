@@ -1,26 +1,32 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ΩÙ¥’’˚∆Îµƒ ±º‰ÀÆ”°π§æﬂ</title>
+    <title>Watermark Page</title>
     <style>
+        @charset "UTF-8";
+        
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
             font-family: Arial, sans-serif;
         }
+        
         .container {
             position: relative;
             width: 100%;
             height: 100%;
         }
+        
         iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
+        
         #watermark-container {
             position: absolute;
             top: 0;
@@ -31,9 +37,12 @@
             z-index: 100;
             overflow: hidden;
         }
+        
         .watermark-item {
-            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+            font-family: Arial, sans-serif;
+            color: #000 !important;
         }
+        
         .corner-notice {
             position: absolute;
             bottom: 10px;
@@ -43,9 +52,8 @@
             opacity: 0.7;
             pointer-events: none;
             z-index: 101;
-            max-width: 300px;
-            font-family: "Microsoft YaHei", "SimHei", sans-serif;
         }
+        
         .time-status {
             position: absolute;
             top: 10px;
@@ -62,101 +70,59 @@
     <div class="container">
         <iframe id="targetFrame"></iframe>
         <div id="watermark-container"></div>
-        <!-- ◊Ûœ¬Ω«Ã· æŒƒ◊÷ -->
         <div class="corner-notice">
-            Ωˆ”È¿÷£¨≤ªµ√”√”⁄…Ã“µ¥´≤•£¨∑Ò‘Ú∫Ûπ˚◊‘∏∫
+            Test Only - Not for commercial use
         </div>
-        <!--  ±º‰Õ¨≤Ω◊¥Ã¨ -->
         <div class="time-status" id="timeStatus">
-            Õ¨≤Ω±±æ© ±º‰÷–...
+            Syncing time...
         </div>
     </div>
 
     <script>
-        // ƒø±Í“≥√ÊURL
         const TARGET_URL = "https://rate.taobao.com/user-myrate-UvCxuOm80MFHSvNTT--deletedTab%7Ctrue.htm?spm=a1z0b.3.5920813.2.2fea1d90ALGrBm#rateList";
         
-        // ÀÆ”°≈‰÷√≤Œ ˝£®ºı–°––º‰æ‡£©
+        // Ê∞¥Âç∞Èó¥Ë∑ùÈÖçÁΩÆ
         const WATERMARK_CONFIG = {
-            format: 'datetime-sec',  //  ±º‰∏Ò Ω
-            horizontalSpacing: 1.6,  // ÀÆ∆Ωº‰æ‡
-            verticalSpacing: 0.8,    // ¥π÷±º‰æ‡£®¥Û∑˘ºı–°£¨ π––”Î––∏¸ΩÙ¥’£©
-            opacity: 0.15,           // Õ∏√˜∂»
-            fontSize: 18,            // ◊÷ÃÂ¥Û–°
-            rotate: -45              // –˝◊™Ω«∂»
+            horizontalSpacing: 1.3,
+            verticalSpacing: 0.7,
+            opacity: 0.15,
+            fontSize: 17,
+            rotate: -45
         };
         
-        // ¥Ê¥¢±±æ© ±º‰£®UTC+8£©
-        let beijingTimeOffset = null;
-        
-        // ªÒ»°Õ¯¬Á±±æ© ±º‰
-        function syncBeijingTime() {
-            //  π”√µ⁄»˝∑ΩAPIªÒ»°Õ¯¬Á ±º‰
-            fetch('https://worldtimeapi.org/api/timezone/Asia/Shanghai')
-                .then(response => response.json())
-                .then(data => {
-                    const beijingTime = new Date(data.datetime);
-                    const localTime = new Date();
-                    beijingTimeOffset = beijingTime.getTime() - localTime.getTime();
-                    document.getElementById('timeStatus').textContent = `±±æ© ±º‰Õ¨≤Ω≥…π¶ (${new Date().toLocaleTimeString()})`;
-                    setTimeout(syncBeijingTime, 30 * 60 * 1000); // √ø30∑÷÷”Õ¨≤Ω“ª¥Œ
-                })
-                .catch(error => {
-                    console.error(' ±º‰Õ¨≤Ω ß∞‹:', error);
-                    document.getElementById('timeStatus').textContent = ` ±º‰Õ¨≤Ω ß∞‹£¨ π”√±æµÿ ±º‰ (${new Date().toLocaleTimeString()})`;
-                    setTimeout(syncBeijingTime, 60 * 1000); // 1∑÷÷”∫Û÷ÿ ‘
-                });
-        }
-        
-        // ªÒ»°µ±«∞±±æ© ±º‰
-        function getBeijingTime(format = 'datetime-sec') {
-            let now;
-            if (beijingTimeOffset !== null) {
-                const localNow = new Date();
-                now = new Date(localNow.getTime() + beijingTimeOffset);
-            } else {
-                now = new Date();
-            }
-            
+        // ÁîüÊàêÁ∫ØËã±ÊñáÊó∂Èó¥Ê†ºÂºèÔºàÊó†‰∏≠ÊñáÔºâ
+        function getCurrentTime() {
+            const now = new Date();
             const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const month = padZero(now.getMonth() + 1);
+            const day = padZero(now.getDate());
+            const hours = padZero(now.getHours());
+            const minutes = padZero(now.getMinutes());
+            const seconds = padZero(now.getSeconds());
             
-            switch(format) {
-                case 'datetime':
-                    return `${year}-${month}-${day} ${hours}:${minutes}`;
-                case 'datetime-sec':
-                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                case 'time':
-                    return `${hours}:${minutes}`;
-                case 'time-sec':
-                    return `${hours}:${minutes}:${seconds}`;
-                default:
-                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            }
+            // Á∫ØÊï∞Â≠óÂíåËã±ÊñáÁ¨¶Âè∑ÔºåÈÅøÂÖç‰ªª‰Ωï‰∏≠Êñá
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
         
-        // ¥¥Ω®ÀÆ”°∫Ø ˝£®’˚∆Î≈≈¡–£¨ºı–°––º‰æ‡£©
+        function padZero(num) {
+            return num < 10 ? "0" + num : num;
+        }
+        
         function createWatermark() {
-            const { opacity, fontSize, rotate, format, horizontalSpacing, verticalSpacing } = WATERMARK_CONFIG;
+            const { opacity, fontSize, rotate, horizontalSpacing, verticalSpacing } = WATERMARK_CONFIG;
             const container = document.getElementById('watermark-container');
             container.innerHTML = '';
             container.style.opacity = opacity;
             
-            const timeText = getBeijingTime(format);
+            const timeText = getCurrentTime();
             
-            // º∆À„ÀÆ”°≥ﬂ¥Á∫Õº‰æ‡
             const baseSize = fontSize * 4.5;
-            const horizontalSize = Math.max(baseSize * horizontalSpacing, 150); // ÀÆ∆Ω∑ΩœÚ≥ﬂ¥Á
-            const verticalSize = Math.max(baseSize * verticalSpacing, 100);    // ¥π÷±∑ΩœÚ≥ﬂ¥Á£®∏¸–°£©
+            const horizontalSize = Math.max(baseSize * horizontalSpacing, 140);
+            const verticalSize = Math.max(baseSize * verticalSpacing, 100);
             
             const screenWidth = window.innerWidth;
             const screenHeight = window.innerHeight;
             
-            // º∆À„––¡– ˝¡ø
             const countX = Math.ceil(screenWidth / horizontalSize) + 1;
             const countY = Math.ceil(screenHeight / verticalSize) + 1;
             
@@ -166,16 +132,16 @@
                     span.textContent = timeText;
                     span.className = 'watermark-item';
                     span.style.position = 'absolute';
-                    span.style.width = `${horizontalSize}px`;
-                    span.style.height = `${verticalSize}px`;
-                    span.style.left = `${i * horizontalSize - horizontalSize/2}px`;
-                    span.style.top = `${j * verticalSize - verticalSize/2}px`;
+                    span.style.width = horizontalSize + 'px';
+                    span.style.height = verticalSize + 'px';
+                    span.style.left = (i * horizontalSize - horizontalSize/2) + 'px';
+                    span.style.top = (j * verticalSize - verticalSize/2) + 'px';
                     span.style.display = 'flex';
                     span.style.alignItems = 'center';
                     span.style.justifyContent = 'center';
-                    span.style.transform = `rotate(${rotate}deg)`;
+                    span.style.transform = 'rotate(' + rotate + 'deg)';
                     span.style.userSelect = 'none';
-                    span.style.fontSize = `${fontSize}px`;
+                    span.style.fontSize = fontSize + 'px';
                     span.style.fontWeight = 'bold';
                     span.style.color = '#000000';
                     span.style.pointerEvents = 'none';
@@ -185,16 +151,16 @@
             }
         }
         
-        // ∏¸–¬À˘”–ÀÆ”° ±º‰
         function updateAllWatermarkTimes() {
-            const timeText = getBeijingTime(WATERMARK_CONFIG.format);
+            const timeText = getCurrentTime();
             const watermarkItems = document.querySelectorAll('.watermark-item');
             watermarkItems.forEach(item => {
                 item.textContent = timeText;
             });
+            
+            document.getElementById('timeStatus').textContent = 'Current time: ' + timeText;
         }
         
-        // º”‘ÿ“≥√Ê
         function loadPage() {
             const frame = document.getElementById('targetFrame');
             frame.src = TARGET_URL;
@@ -206,12 +172,11 @@
                 try {
                     frame.contentWindow.addEventListener('scroll', syncScroll);
                 } catch (e) {
-                    console.log('πˆ∂Øº‡Ã˝ ß∞‹:', e);
+                    console.log('Scroll listen failed:', e);
                 }
             };
         }
         
-        // Õ¨≤Ωπˆ∂ØŒª÷√
         function syncScroll() {
             const frame = document.getElementById('targetFrame');
             const watermark = document.getElementById('watermark-container');
@@ -219,33 +184,28 @@
                 try {
                     const scrollTop = frame.contentWindow.scrollY;
                     const scrollLeft = frame.contentWindow.scrollX;
-                    watermark.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+                    watermark.style.transform = 'translate(-' + scrollLeft + 'px, -' + scrollTop + 'px)';
                 } catch (e) {
-                    // ∫ˆ¬‘øÁ”Ú¥ÌŒÛ
+                    // Cross-domain may fail
                 }
             }
         }
         
-        // ◊‘∂Ø∏¸–¬ ±º‰
         let updateInterval;
         function startAutoUpdate() {
             if (updateInterval) clearInterval(updateInterval);
             updateInterval = setInterval(updateAllWatermarkTimes, 1000);
         }
         
-        // “≥√Êº”‘ÿÕÍ≥…∫Û≥ı ºªØ
         window.addEventListener('load', () => {
-            syncBeijingTime();
             window.addEventListener('resize', createWatermark);
             createWatermark();
             loadPage();
         });
         
-        // “≥√Êπÿ±’ ±«Â¿Ì
         window.addEventListener('beforeunload', () => {
             if (updateInterval) clearInterval(updateInterval);
         });
     </script>
 </body>
 </html>
-    
