@@ -13,14 +13,12 @@
             padding: 0;
             height: 100%;
             font-family: Arial, sans-serif;
-            overflow: hidden; /* 防止页面整体滚动 */
         }
         
         .container {
             position: relative;
             width: 100%;
             height: 100%;
-            transition: transform 0.2s ease; /* 平滑缩放过渡 */
         }
         
         iframe {
@@ -66,41 +64,6 @@
             pointer-events: none;
             z-index: 101;
         }
-
-        /* 缩放控制按钮样式 */
-        .zoom-controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 102;
-            display: flex;
-            gap: 5px;
-            background: white;
-            padding: 5px;
-            border-radius: 4px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.2);
-        }
-
-        .zoom-btn {
-            width: 30px;
-            height: 30px;
-            border: none;
-            background: #f0f0f0;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .zoom-btn:hover {
-            background: #e0e0e0;
-        }
-
-        .zoom-level {
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
@@ -113,18 +76,12 @@
         <div class="time-status" id="timeStatus">
             Syncing time...
         </div>
-        <!-- 缩放控制按钮 -->
-        <div class="zoom-controls">
-            <button class="zoom-btn" id="zoomOut">-</button>
-            <div class="zoom-level" id="zoomLevel">100%</div>
-            <button class="zoom-btn" id="zoomIn">+</button>
-        </div>
     </div>
 
     <script>
         const TARGET_URL = "https://rate.taobao.com/user-myrate-UvCxuOm80MFHSvNTT--deletedTab%7Ctrue.htm?spm=a1z0b.3.5920813.2.2fea1d90ALGrBm#rateList";
         
-        // 水印配置参数
+        // 水印间距配置
         const WATERMARK_CONFIG = {
             horizontalSpacing: 1.3,
             verticalSpacing: 0.7,
@@ -132,14 +89,8 @@
             fontSize: 17,
             rotate: -45
         };
-
-        // 缩放相关变量
-        let currentScale = 1.0;
-        const scaleStep = 0.1;
-        const minScale = 0.5;
-        const maxScale = 2.0;
         
-        // 获取当前时间并格式化
+        // 生成纯英文时间格式（无中文）
         function getCurrentTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -149,6 +100,7 @@
             const minutes = padZero(now.getMinutes());
             const seconds = padZero(now.getSeconds());
             
+            // 纯数字和英文符号，避免任何中文
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
         
@@ -164,14 +116,12 @@
             
             const timeText = getCurrentTime();
             
-            // 根据当前缩放比例调整水印大小
-            const scaledFontSize = fontSize * currentScale;
-            const baseSize = scaledFontSize * 4.5;
-            const horizontalSize = Math.max(baseSize * horizontalSpacing, 140 * currentScale);
-            const verticalSize = Math.max(baseSize * verticalSpacing, 100 * currentScale);
+            const baseSize = fontSize * 4.5;
+            const horizontalSize = Math.max(baseSize * horizontalSpacing, 140);
+            const verticalSize = Math.max(baseSize * verticalSpacing, 100);
             
-            const screenWidth = window.innerWidth / currentScale;
-            const screenHeight = window.innerHeight / currentScale;
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
             
             const countX = Math.ceil(screenWidth / horizontalSize) + 1;
             const countY = Math.ceil(screenHeight / verticalSize) + 1;
@@ -189,9 +139,9 @@
                     span.style.display = 'flex';
                     span.style.alignItems = 'center';
                     span.style.justifyContent = 'center';
-                    span.style.transform = `rotate(${rotate}deg)`;
+                    span.style.transform = 'rotate(' + rotate + 'deg)';
                     span.style.userSelect = 'none';
-                    span.style.fontSize = scaledFontSize + 'px';
+                    span.style.fontSize = fontSize + 'px';
                     span.style.fontWeight = 'bold';
                     span.style.color = '#000000';
                     span.style.pointerEvents = 'none';
@@ -234,30 +184,11 @@
                 try {
                     const scrollTop = frame.contentWindow.scrollY;
                     const scrollLeft = frame.contentWindow.scrollX;
-                    watermark.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+                    watermark.style.transform = 'translate(-' + scrollLeft + 'px, -' + scrollTop + 'px)';
                 } catch (e) {
-                    // 跨域可能失败
+                    // Cross-domain may fail
                 }
             }
-        }
-        
-        // 缩放功能实现
-        function updateScale(newScale) {
-            // 限制缩放范围
-            if (newScale < minScale || newScale > maxScale) return;
-            
-            currentScale = newScale;
-            const container = document.querySelector('.container');
-            
-            // 应用缩放变换
-            container.style.transform = `scale(${currentScale})`;
-            container.style.transformOrigin = 'center center';
-            
-            // 更新缩放显示
-            document.getElementById('zoomLevel').textContent = `${Math.round(currentScale * 100)}%`;
-            
-            // 重新创建水印以适应新的缩放比例
-            createWatermark();
         }
         
         let updateInterval;
@@ -268,28 +199,6 @@
         
         window.addEventListener('load', () => {
             window.addEventListener('resize', createWatermark);
-            
-            // 缩放控制事件
-            document.getElementById('zoomIn').addEventListener('click', () => {
-                updateScale(currentScale + scaleStep);
-            });
-            
-            document.getElementById('zoomOut').addEventListener('click', () => {
-                updateScale(currentScale - scaleStep);
-            });
-            
-            // 支持鼠标滚轮缩放
-            window.addEventListener('wheel', (e) => {
-                if (e.ctrlKey) { // 按住Ctrl键配合滚轮
-                    e.preventDefault();
-                    if (e.deltaY < 0) {
-                        updateScale(currentScale + scaleStep);
-                    } else {
-                        updateScale(currentScale - scaleStep);
-                    }
-                }
-            });
-            
             createWatermark();
             loadPage();
         });
