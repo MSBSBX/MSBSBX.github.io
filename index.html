@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紧凑整齐的时间水印工具</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #watermark-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+        }
+        .watermark-item {
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        .corner-notice {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 12px;
+            color: #666;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 101;
+            max-width: 300px;
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        .time-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #666;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 101;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <iframe id="targetFrame"></iframe>
+        <div id="watermark-container"></div>
+        <!-- 左下角提示文字 -->
+        <div class="corner-notice">
+            仅娱乐，不得用于商业传播，否则后果自负
+        </div>
+        <!-- 时间同步状态 -->
+        <div class="time-status" id="timeStatus">
+            同步北京时间中...
+        </div>
+    </div>
+
+    <script>
+        // 目标页面URL
+        const TARGET_URL = "https://rate.taobao.com/user-myrate-UvCxuOm80MFHSvNTT--deletedTab%7Ctrue.htm?spm=a1z0b.3.5920813.2.2fea1d90ALGrBm#rateList";
+        
+        // 水印配置参数（减小行间距）
+        const WATERMARK_CONFIG = {
+            format: 'datetime-sec',  // 时间格式
+            horizontalSpacing: 1.6,  // 水平间距
+            verticalSpacing: 0.8,    // 垂直间距（大幅减小，使行与行更紧凑）
+            opacity: 0.15,           // 透明度
+            fontSize: 18,            // 字体大小
+            rotate: -45              // 旋转角度
+        };
+        
+        // 存储北京时间（UTC+8）
+        let beijingTimeOffset = null;
+        
+        // 获取网络北京时间
+        function syncBeijingTime() {
+            // 使用第三方API获取网络时间
+            fetch('https://worldtimeapi.org/api/timezone/Asia/Shanghai')
+                .then(response => response.json())
+                .then(data => {
+                    const beijingTime = new Date(data.datetime);
+                    const localTime = new Date();
+                    beijingTimeOffset = beijingTime.getTime() - localTime.getTime();
+                    document.getElementById('timeStatus').textContent = `北京时间同步成功 (${new Date().toLocaleTimeString()})`;
+                    setTimeout(syncBeijingTime, 30 * 60 * 1000); // 每30分钟同步一次
+                })
+                .catch(error => {
+                    console.error('时间同步失败:', error);
+                    document.getElementById('timeStatus').textContent = `时间同步失败，使用本地时间 (${new Date().toLocaleTimeString()})`;
+                    setTimeout(syncBeijingTime, 60 * 1000); // 1分钟后重试
+                });
+        }
+        
+        // 获取当前北京时间
+        function getBeijingTime(format = 'datetime-sec') {
+            let now;
+            if (beijingTimeOffset !== null) {
+                const localNow = new Date();
+                now = new Date(localNow.getTime() + beijingTimeOffset);
+            } else {
+                now = new Date();
+            }
+            
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            switch(format) {
+                case 'datetime':
+                    return `${year}-${month}-${day} ${hours}:${minutes}`;
+                case 'datetime-sec':
+                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                case 'time':
+                    return `${hours}:${minutes}`;
+                case 'time-sec':
+                    return `${hours}:${minutes}:${seconds}`;
+                default:
+                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        // 创建水印函数（整齐排列，减小行间距）
+        function createWatermark() {
+            const { opacity, fontSize, rotate, format, horizontalSpacing, verticalSpacing } = WATERMARK_CONFIG;
+            const container = document.getElementById('watermark-container');
+            container.innerHTML = '';
+            container.style.opacity = opacity;
+            
+            const timeText = getBeijingTime(format);
+            
+            // 计算水印尺寸和间距
+            const baseSize = fontSize * 4.5;
+            const horizontalSize = Math.max(baseSize * horizontalSpacing, 150); // 水平方向尺寸
+            const verticalSize = Math.max(baseSize * verticalSpacing, 100);    // 垂直方向尺寸（更小）
+            
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            
+            // 计算行列数量
+            const countX = Math.ceil(screenWidth / horizontalSize) + 1;
+            const countY = Math.ceil(screenHeight / verticalSize) + 1;
+            
+            for (let i = 0; i < countX; i++) {
+                for (let j = 0; j < countY; j++) {
+                    const span = document.createElement('span');
+                    span.textContent = timeText;
+                    span.className = 'watermark-item';
+                    span.style.position = 'absolute';
+                    span.style.width = `${horizontalSize}px`;
+                    span.style.height = `${verticalSize}px`;
+                    span.style.left = `${i * horizontalSize - horizontalSize/2}px`;
+                    span.style.top = `${j * verticalSize - verticalSize/2}px`;
+                    span.style.display = 'flex';
+                    span.style.alignItems = 'center';
+                    span.style.justifyContent = 'center';
+                    span.style.transform = `rotate(${rotate}deg)`;
+                    span.style.userSelect = 'none';
+                    span.style.fontSize = `${fontSize}px`;
+                    span.style.fontWeight = 'bold';
+                    span.style.color = '#000000';
+                    span.style.pointerEvents = 'none';
+                    span.style.whiteSpace = 'nowrap';
+                    container.appendChild(span);
+                }
+            }
+        }
+        
+        // 更新所有水印时间
+        function updateAllWatermarkTimes() {
+            const timeText = getBeijingTime(WATERMARK_CONFIG.format);
+            const watermarkItems = document.querySelectorAll('.watermark-item');
+            watermarkItems.forEach(item => {
+                item.textContent = timeText;
+            });
+        }
+        
+        // 加载页面
+        function loadPage() {
+            const frame = document.getElementById('targetFrame');
+            frame.src = TARGET_URL;
+            
+            frame.onload = function() {
+                createWatermark();
+                startAutoUpdate();
+                
+                try {
+                    frame.contentWindow.addEventListener('scroll', syncScroll);
+                } catch (e) {
+                    console.log('滚动监听失败:', e);
+                }
+            };
+        }
+        
+        // 同步滚动位置
+        function syncScroll() {
+            const frame = document.getElementById('targetFrame');
+            const watermark = document.getElementById('watermark-container');
+            if (frame && watermark) {
+                try {
+                    const scrollTop = frame.contentWindow.scrollY;
+                    const scrollLeft = frame.contentWindow.scrollX;
+                    watermark.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+                } catch (e) {
+                    // 忽略跨域错误
+                }
+            }
+        }
+        
+        // 自动更新时间
+        let updateInterval;
+        function startAutoUpdate() {
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updateAllWatermarkTimes, 1000);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            syncBeijingTime();
+            window.addEventListener('resize', createWatermark);
+            createWatermark();
+            loadPage();
+        });
+        
+        // 页面关闭时清理
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) clearInterval(updateInterval);
+        });
+    </script>
+</body>
+</html>
+    
